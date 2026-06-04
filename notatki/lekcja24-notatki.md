@@ -247,27 +247,56 @@ make_moons(500, noise=0.3) → MLP (20, 10) vs RF (100 drzew) → contourf + acc
 
 ### O czym jest to zadanie?
 
-Porównujesz **3 gotowe architektury MLP** z **Random Forest** na **danych tabelarycznych** Wine Quality (czerwone wino, UCI). Target: `quality >= 7` → klasa „good” (1). To **kontynuacja lekcji 23** — ten sam dataset, inne modele (sieć vs ensemble).
+Zaplanowane **eksperymenty** (listy wartości **przed** treningiem, bez `GridSearch`) na Wine Quality: **6 architektur MLP** → **5 learning rate** na zwycięzcy z eks. 1 → **RF: drzewa** → **RF: głębokość** → finał **najlepszy MLP vs najlepszy RF** na tym samym teście.
 
-```
-800 próbek → CV=5 (4 modele) → bar chart → test: MLP (32, 16) vs RF
-```
-
-Parametry **zamknięte w tabeli zadania** — nie wymyślasz architektur ani hiperparametrów.
-
-### Podsumowanie
-
-| Element | Wniosek |
+| Element | Wartość |
 |---------|---------|
-| **800 próbek** | Szybsze CV niż pełne ~1600 wierszy; nadal mały dataset tabularny |
-| **3 MLP + RF** | `(32,)`, `(32, 16)`, `(64, 32)` vs 100 drzew — stała lista do porównania |
-| **Pipeline + CV** | `StandardScaler` w Pipeline + `cross_val_score(cv=5)` — wzorzec z Zadania 6 |
-| **Typowe CV** | RF ~88% > MLP (32,16) ~86% > MLP (64,32) ~85% > MLP (32,) ~81% |
-| **Typowy test** | RF często wygrywa (~90–92%) vs MLP (32,16) (~84%) |
-| **Nierównowaga klas** | ~14% „good” — stąd `stratify=y` przy podziale |
-| **Praktyka DS** | Na tabular data **RF/XGBoost** często ≥ MLP — zgodnie z PDF lekcji 24 |
+| Dane | 800 wierszy, `random_state=42`, target `quality >= 7` |
+| MLP | Cross-entropy, `relu`, `adam`, `Pipeline(StandardScaler + MLP)` |
+| Wybór hiperparametrów | **CV (5-fold)** w każdym kroku; **test** raz na końcu |
 
-### Na rozmowę
+### Architektura MLP — na szybko
 
-> „Na Wine Quality porównałam trzy architektury MLP z Random Forest. Użyłam Pipeline ze skalerem i walidacji krzyżowej cv=5 — tak jak przy porównywaniu aktywacji w Zadaniu 6. Random Forest miał wyższą accuracy (~88% CV, ~92% test) niż MLP (32, 16). To typowy wynik na małych danych tabelarycznych: ensemble drzew często wygrywa z prostą siecią sklearn. Sieci neuronowe stosuję raczej przy obrazach i tekście.”
+- `hidden_layer_sizes` = neurony w warstwach ukrytych, np. `(32, 16)` = 2 warstwy.
+- Eks. 1: od `(4,)` do `(512, 256)` przy **stałym** LR `0.001` — wniosek dotyczy **kształtu sieci**, nie kroku uczenia.
+- Więcej parametrów ≠ zawsze lepsza accuracy na 800 próbkach (ryzyko overfittingu).
+- Wykres **accuracy vs parametry** + siatka **loss** (2×3) = czy sieć się uczy i czy złożoność się opłaca.
+
+### Jak dwa modele powinny się porównywać
+
+To **nie** są dwa modele „tego samego typu” — to **dwa różne podejścia** na ten sam problem:
+
+```
+Te same dane (Wine, ten sam target, ten sam podział train/test)
+        ↓
+   MLP                          Random Forest
+   - skalowanie (Pipeline)      - bez skalowania
+   - architektura + LR          - liczba drzew + głębokość
+   - loss curve (diagnostyka)   - brak loss curve
+        ↓                              ↓
+   najlepszy MLP (po eks.)      najlepszy RF (po eks.)
+        ↓                              ↓
+        └──────── test accuracy ────────┘
+```
+
+**Uczciwe porównanie oznacza:**
+
+- **Ten sam problem** — u nas: `quality >= 7` (binarnie). To ważne.
+- **Ten sam zbiór testowy** — jeden raz, na końcu (nie podglądać testu przy każdym eksperymencie — idealnie **CV do wyboru**, **test tylko finał**).
+- **Ta sama metryka** — np. accuracy (przy nierównowadze klas warto wspomnieć, że **AUC** też by się przydało).
+- **Oba modele „dopasowane”** — nie domyślny MLP vs dopieszczony RF (albo oba z rozsądnymi eksperymentami).
+- **Wniosek z lekcji** (tabular, ~800 próbek): RF często ≥ MLP — to jest **oczekiwany wynik**, nie błąd.
+
+### Jak obronić porównanie MLP vs RF (wklejka na prezentację)
+
+1. Ten sam problem: Wine, 800 próbek, binarny target, ten sam train/test.
+2. Osobno stroję MLP: architektura (CV) → LR na tej architekturze (CV); osobno RF: drzewa (CV) → głębokość (CV).
+3. Finał: jeden dopasowany MLP vs jeden dopasowany RF — **accuracy na wspólnym zbiorze testowym**.
+4. Architektura odpowiada: „ile neuronów/warstw wystarczy?” — szukam kompromisu CV, nie największej sieci.
+5. MLP (skalowanie, loss curves, cross-entropy) vs RF (drzewa, bez skalowania) — dwie rodziny na **tabular data**.
+6. RF często ≥ MLP na małych tabelach — oczekiwany wniosek z lekcji, nie błąd.
+
+### Na rozmowę (jedno zdanie + liczby z Twojego runu)
+
+> „Na Wine Quality przeprowadziłam eksperymenty: sześć architektur MLP, potem learning rate na najlepszej z CV, osobno liczba drzew i głębokość w Random Forest. Wybrałam zwycięzców po walidacji krzyżowej i raz porównałam najlepszy MLP z najlepszym RF na teście. Architektura pokazała, gdzie dokładanie neuronów przestaje poprawiać wynik; na tych danych tabelarycznych las drzew [wpisz swoje %] był [lepszy / podobny] do sieci [wpisz swoje %].”
 
