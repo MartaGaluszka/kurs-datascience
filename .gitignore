@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Hugging Face / model caches (large binary weights — do not commit)
+.hf_cache/
+.cache/
+**/results_lekcja*/
